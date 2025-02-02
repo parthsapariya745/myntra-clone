@@ -732,8 +732,17 @@
             drag(e) {
                 if (!this.isDragging) return;
                 
-                e.preventDefault();
-                this.currentX = e.type === 'mousemove' ? e.pageX : e.touches[0].pageX;
+                let currentTouchX = e.type === 'mousemove' ? e.pageX : e.touches[0].pageX;
+                let currentTouchY = e.type === 'mousemove' ? e.pageY : e.touches[0].pageY;
+
+                let diffX = Math.abs(this.startX - currentTouchX);
+                let diffY = Math.abs(e.touches?.[0]?.pageY - this.startX);
+
+                if (diffX > diffY) {
+                    e.preventDefault();
+                }
+
+                this.currentX = currentTouchX;
             },
             endDrag() {
                 if (!this.isDragging) return;
