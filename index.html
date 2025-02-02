@@ -61,31 +61,11 @@
         left: 0%;
         right: 0%;
     }
-    .slider-container {
-            width: 100%;
-            overflow: hidden;
-            position: relative;
-            touch-action: none;
-        }
-        .slider-track {
-            display: flex;
-            transition: transform 0.3s ease-out;
-        }
-        .slider-item {
-            flex: 0 0 25%;
-            padding: 5px;
-        }
-        @media (max-width: 768px) {
-            .slider-item {
-                flex: 0 0 50%;
-            }
-        }
-        .slider-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
+    .img-break {
+        touch-action: none;
+        user-select: none;
+        overflow: hidden;
+    }
     @media (max-width : 400px) {
         .img-break .grid{
             grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -713,11 +693,10 @@
 
         <!-- main section  -->
         <!-- slider part  -->
-        <div x-data="{
-            currentIndex: 0,
+        <div x-data="{ 
+            currentPage: 0,
             startX: 0,
-            currentTranslate: 0,
-            prevTranslate: 0,
+            currentX: 0,
             isDragging: false,
             images: [
                 './Assets/s1.jpeg',
@@ -737,78 +716,79 @@
                 './Assets/s15.jpeg',
                 './Assets/s16.jpg'
             ],
-            touchStart(e) {
-                this.startX = e.touches[0].clientX;
-                this.isDragging = true;
-                this.prevTranslate = this.currentTranslate;
+            init() {
+                this.$watch('currentPage', value => {
+                    if (value < 0) this.currentPage = 0;
+                    if (value >= Math.ceil(this.images.length / 4)) {
+                        this.currentPage = Math.ceil(this.images.length / 4) - 1;
+                    }
+                });
             },
-            touchMove(e) {
+            startDrag(e) {
+                this.isDragging = true;
+                this.startX = e.type === 'mousedown' ? e.pageX : e.touches[0].pageX;
+                this.currentX = this.startX;
+            },
+            drag(e) {
                 if (!this.isDragging) return;
                 
-                const currentPosition = e.touches[0].clientX;
-                const diff = currentPosition - this.startX;
-                
-                // Add resistance at the edges
-                if (
-                    (this.currentIndex === 0 && diff > 0) || 
-                    (this.currentIndex === this.images.length - 4 && diff < 0)
-                ) {
-                    diff = diff / 4;
-                }
-                
-                this.currentTranslate = this.prevTranslate + diff;
-                this.updateSliderPosition();
+                e.preventDefault();
+                this.currentX = e.type === 'mousemove' ? e.pageX : e.touches[0].pageX;
             },
-            touchEnd() {
-                this.isDragging = false;
-                const movedBy = this.currentTranslate - this.prevTranslate;
+            endDrag() {
+                if (!this.isDragging) return;
                 
-                if (Math.abs(movedBy) > 100) {
-                    if (movedBy < 0 && this.currentIndex < this.images.length - 4) {
-                        this.currentIndex++;
-                    } else if (movedBy > 0 && this.currentIndex > 0) {
-                        this.currentIndex--;
+                const diffX = this.startX - this.currentX;
+                const threshold = window.innerWidth * 0.15; // 15% of screen width
+                
+                if (Math.abs(diffX) > threshold) {
+                    if (diffX > 0 && this.currentPage < Math.ceil(this.images.length / 4) - 1) {
+                        this.currentPage++;
+                    } else if (diffX < 0 && this.currentPage > 0) {
+                        this.currentPage--;
                     }
                 }
                 
-                this.currentTranslate = this.currentIndex * -25;
-                this.updateSliderPosition();
-            },
-            updateSliderPosition() {
-                const track = this.$refs.track;
-                if (track) {
-                    track.style.transform = `translateX(${this.currentTranslate}%)`;
-                }
+                this.isDragging = false;
             }
-        }" class="w-full xl:max-w-[1345px] mx-auto p-4">
-            <div class="slider-container"
-                 @touchstart.prevent="touchStart"
-                 @touchmove.prevent="touchMove"
-                 @touchend.prevent="touchEnd">
-                <div class="slider-track" x-ref="track">
-                    <template x-for="(image, index) in images" :key="index">
-                        <div class="slider-item">
+        }" class="w-full xl:max-w-[1345px] mx-auto">
+            <div class="img-break relative p-4"
+                 @mousedown="startDrag"
+                 @mousemove="drag"
+                 @mouseup="endDrag"
+                 @mouseleave="endDrag"
+                 @touchstart="startDrag"
+                 @touchmove="drag"
+                 @touchend="endDrag">
+                <div class="grid grid-cols-2 md:grid-cols-4"
+                     :style="isDragging ? 'cursor: grabbing' : 'cursor: grab'">
+                    <template x-for="(image, index) in images.slice(currentPage * 4, (currentPage + 1) * 4)" :key="index">
+                        <div class="aspect-w-4 aspect-h-3">
                             <img :src="image" 
-                                 class="slider-img"
+                                 class="w-full object-cover transition-all duration-300 transform"
+                                 :class="{ 
+                                    'opacity-0': !image, 
+                                    'opacity-100': image,
+                                    'scale-[0.98]': isDragging
+                                 }"
                                  alt="Slider image"
                                  draggable="false">
                         </div>
                     </template>
                 </div>
-            </div>
-            
-            <div class="flex justify-between mt-4">
-                <div class="flex space-x-3 items-center justify-center w-full">
-                    <template x-for="(_, index) in Math.ceil(images.length / 4)" :key="index">
-                        <button @click="currentIndex = index" 
-                                class="w-3 h-3 rounded-full transition-colors duration-200"
-                                :class="currentIndex === index ? 'bg-blue-600' : 'bg-gray-300'">
-                        </button>
-                    </template>
+                <div class="flex justify-between mt-4">
+                    <div class="flex space-x-3 items-center justify-center w-full">
+                        <template x-for="page in Math.ceil(images.length / 4)" :key="page">
+                            <button 
+                                @click="currentPage = page - 1"
+                                class="w-2 h-2 rounded-full transition-colors duration-200"
+                                :class="currentPage === page - 1 ? 'bg-[#7E818C]' : 'bg-gray-300'">
+                            </button>
+                        </template>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div> 
+        </div> 
         <!-- slider part  -->
         <!-- card type img part  -->
         <div class="container mx-auto main-hero xl:max-w-[1320px] mt-1">
