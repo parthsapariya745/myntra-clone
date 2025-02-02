@@ -62,7 +62,7 @@
         right: 0%;
     }
     .img-break {
-        touch-action: none;
+        touch-action: pan-y; 
         user-select: none;
         overflow: hidden;
     }
@@ -697,6 +697,8 @@
             currentPage: 0,
             startX: 0,
             currentX: 0,
+            startY: 0, 
+            currentY: 0,
             isDragging: false,
             images: [
                 './Assets/s1.jpeg',
@@ -726,23 +728,27 @@
             },
             startDrag(e) {
                 this.isDragging = true;
-                this.startX = e.type === 'mousedown' ? e.pageX : e.touches[0].pageX;
+                this.startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+                this.startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY; 
                 this.currentX = this.startX;
+                this.currentY = this.startY; 
             },
             drag(e) {
                 if (!this.isDragging) return;
                 
-                let currentTouchX = e.type === 'mousemove' ? e.pageX : e.touches[0].pageX;
-                let currentTouchY = e.type === 'mousemove' ? e.pageY : e.touches[0].pageY;
+                let moveX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+                let moveY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY; 
 
-                let diffX = Math.abs(this.startX - currentTouchX);
-                let diffY = Math.abs(e.touches?.[0]?.pageY - this.startX);
+                let diffX = Math.abs(this.startX - moveX);
+                let diffY = Math.abs(this.startY - moveY);
 
-                if (diffX > diffY) {
+                // ✅ Only prevent default if horizontal movement is greater than vertical
+                if (diffX > diffY) { 
                     e.preventDefault();
                 }
 
-                this.currentX = currentTouchX;
+                this.currentX = moveX;
+                this.currentY = moveY; 
             },
             endDrag() {
                 if (!this.isDragging) return;
@@ -797,7 +803,8 @@
                     </div>
                 </div>
             </div>
-        </div> 
+        </div>
+
         <!-- slider part  -->
         <!-- card type img part  -->
         <div class="container mx-auto main-hero xl:max-w-[1320px] mt-1">
