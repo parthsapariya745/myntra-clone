@@ -742,7 +742,6 @@
                 let diffX = Math.abs(this.startX - moveX);
                 let diffY = Math.abs(this.startY - moveY);
 
-                // ✅ Only prevent default if horizontal movement is greater than vertical
                 if (diffX > diffY) { 
                     e.preventDefault();
                 }
